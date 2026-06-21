@@ -1,0 +1,2 @@
+- [장부 앱 개요](project_jangbu_app.md) — 소규모 법인용 단일 HTML 복식부기/부가세 장부 앱(jangbu.html). 법인세 산출 미구현.
+- [세무 로직 위치](reference_jangbu_logic.md) — TYPES/ACCT_TYPE/VAT_PERIODS/FILINGS 등 핵심 함수 위치 및 계산 방식.

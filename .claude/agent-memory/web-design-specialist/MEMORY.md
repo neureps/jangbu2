@@ -1,0 +1,1 @@
+- [Jangbu design system](project_jangbu_design_system.md) — single-file Korean bookkeeping app: constraints, tokens, debit-blue/credit-red convention, protected JS ids/classes

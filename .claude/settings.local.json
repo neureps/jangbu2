@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(open /Users/cypark/jangbu/jangbu.html)",
+      "Bash(node -e ' *)",
+      "Bash(open jangbu.html)",
+      "Bash(node --input-type=module -e ' *)"
+    ]
+  }
+}

@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>장부 — 법인 복식부기 장부</title>
+<style>
+  :root{
+    /* 표면 / 라인 / 텍스트 */
+    --bg:#f4f6f9; --bg-grad:#eef1f6; --card:#ffffff; --line:#e6e9ef; --line-soft:#eef1f5;
+    --ink:#1a2233; --ink-2:#3b4456; --sub:#6b7480; --sub-2:#9aa3b0;
+    /* 회계 상태색 */
+    --debit:#1f6fdb; --debit-soft:#eef4ff;
+    --credit:#d6442a; --credit-soft:#fdf0ed;
+    --accent:#2563eb; --accent-700:#1d4ed8; --accent-soft:#eef3ff;
+    --ok:#15a34a; --ok-soft:#eafaf0; --bad:#dc2626; --warn:#b45309; --warn-soft:#fff7e6;
+    /* 그림자 / 라운드 */
+    --sh-sm:0 1px 2px rgba(20,30,50,.04);
+    --sh:0 1px 3px rgba(20,30,50,.06), 0 8px 24px -12px rgba(20,30,50,.10);
+    --sh-lg:0 4px 12px -2px rgba(20,30,50,.08), 0 16px 40px -16px rgba(20,30,50,.16);
+    --r-sm:8px; --r:12px; --r-lg:16px;
+    --num:"Segoe UI",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic","Noto Sans KR",sans-serif;
+    background:
+      radial-gradient(1200px 600px at 50% -200px, var(--bg-grad), transparent 70%),
+      var(--bg);
+    color:var(--ink);font-size:14px;line-height:1.6;
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+    letter-spacing:-0.01em}
+
+  /* ---------- 헤더 ---------- */
+  header{
+    background:linear-gradient(110deg,#0f1626 0%,#162338 55%,#1b2c47 100%);
+    color:#fff;padding:18px 24px;display:flex;align-items:center;gap:14px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    box-shadow:0 1px 0 rgba(20,30,50,.04)}
+  header h1{margin:0;font-size:19px;font-weight:800;letter-spacing:.04em;display:flex;align-items:center;gap:10px}
+  header h1::before{
+    content:"";width:26px;height:26px;border-radius:7px;flex:none;
+    background:linear-gradient(135deg,#3b82f6,#2563eb);
+    box-shadow:0 2px 8px rgba(37,99,235,.45), inset 0 1px 0 rgba(255,255,255,.3)}
+  header .sub{color:#9aa6bd;font-size:12.5px;font-weight:500;letter-spacing:0}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 56px}
+
+  /* ---------- 카드 ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+    padding:24px;margin-bottom:20px;box-shadow:var(--sh)}
+  .card h2{margin:0 0 18px;font-size:15px;font-weight:800;letter-spacing:-0.01em;
+    display:flex;align-items:center;gap:9px;color:var(--ink)}
+  .card h2::before{content:"";width:4px;height:15px;border-radius:3px;
+    background:linear-gradient(180deg,var(--accent),var(--accent-700))}
+
+  /* ---------- 폼 ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px 16px}
+  label{display:block;font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600;letter-spacing:-0.01em}
+  input,select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:var(--r-sm);
+    font-size:14px;background:#fff;color:var(--ink);font-family:inherit;
+    transition:border-color .15s ease, box-shadow .15s ease, background .15s ease}
+  input::placeholder{color:var(--sub-2)}
+  select{cursor:pointer;appearance:none;-webkit-appearance:none;
+    background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),linear-gradient(135deg,var(--sub) 50%,transparent 50%);
+    background-position:calc(100% - 16px) 50%, calc(100% - 11px) 50%;
+    background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:32px}
+  input:hover,select:hover{border-color:#cdd3dd}
+  input:focus,select:focus{outline:none;border-color:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+  input[type="date"]{cursor:text}
+  #amount{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";letter-spacing:0}
+
+  .row-check{display:flex;align-items:center;gap:10px;margin-top:16px;
+    background:var(--bg);border:1px solid var(--line-soft);border-radius:var(--r-sm);
+    padding:11px 14px}
+  .row-check input{width:auto;accent-color:var(--accent);width:17px;height:17px;cursor:pointer;flex:none}
+  .row-check label{cursor:pointer}
+
+  /* ---------- 버튼 ---------- */
+  .btn{background:linear-gradient(180deg,var(--accent),var(--accent-700));color:#fff;border:none;
+    padding:12px 22px;border-radius:var(--r-sm);font-size:14px;font-weight:700;cursor:pointer;
+    font-family:inherit;letter-spacing:-0.01em;min-height:44px;
+    box-shadow:0 1px 2px rgba(37,99,235,.3), 0 6px 16px -6px rgba(37,99,235,.5);
+    transition:transform .12s ease, box-shadow .15s ease, filter .15s ease}
+  .btn:hover{filter:brightness(1.05);box-shadow:0 2px 4px rgba(37,99,235,.35), 0 10px 22px -8px rgba(37,99,235,.55)}
+  .btn:active{transform:translateY(1px);box-shadow:0 1px 2px rgba(37,99,235,.3)}
+  .btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-soft), 0 6px 16px -6px rgba(37,99,235,.5)}
+  .btn.ghost{background:#fff;color:var(--ink-2);border:1px solid var(--line);box-shadow:var(--sh-sm)}
+  .btn.ghost:hover{filter:none;background:var(--bg);border-color:#d4d9e2;box-shadow:var(--sh-sm)}
+  .btn.sm{padding:8px 14px;font-size:13px;min-height:38px;font-weight:600}
+
+  .actions{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;align-items:center}
+
+  /* ---------- 분개 미리보기 ---------- */
+  .preview{margin-top:18px;background:linear-gradient(180deg,#fbfcfe,#f7f9fc);
+    border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;font-size:13.5px;
+    box-shadow:inset 0 1px 0 #fff}
+  .preview .ln{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    font-variant-numeric:tabular-nums;padding:5px 0;font-weight:600}
+  .preview .ln + .ln{border-top:1px dashed var(--line)}
+  .preview .ln span:last-child{font-family:var(--num);font-feature-settings:"tnum";font-weight:700}
+  .deb{color:var(--debit)} .cre{color:var(--credit)}
+
+  /* ---------- 테이블 ---------- */
+  table{width:100%;border-collapse:separate;border-spacing:0;
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  thead th{position:sticky;top:0}
+  th,td{padding:11px 12px;border-bottom:1px solid var(--line-soft);text-align:left;font-size:13px;vertical-align:top}
+  th{color:var(--sub);font-weight:700;font-size:11px;letter-spacing:.04em;
+    background:var(--bg);border-bottom:1px solid var(--line);white-space:nowrap}
+  thead th:first-child{border-top-left-radius:var(--r-sm)}
+  thead th:last-child{border-top-right-radius:var(--r-sm)}
+  td.num,th.num{text-align:right;font-family:var(--num);font-feature-settings:"tnum"}
+  td.deb,td.cre{font-weight:700}
+  tbody tr{transition:background .12s ease}
+  tbody tr:hover{background:#f7faff}
+  tbody tr:last-child td{border-bottom:none}
+  tfoot td{background:var(--bg);font-weight:800}
+
+  /* ---------- 탭 ---------- */
+  .tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;
+    background:var(--bg);padding:5px;border-radius:12px;border:1px solid var(--line-soft)}
+  .tab{padding:9px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13.5px;
+    color:var(--sub);background:transparent;border:1px solid transparent;
+    transition:all .15s ease;user-select:none}
+  .tab:hover{color:var(--ink-2);background:#fff;box-shadow:var(--sh-sm)}
+  .tab.active{background:#fff;color:var(--accent-700);border-color:var(--line);
+    box-shadow:var(--sh-sm);font-weight:700}
+
+  /* ---------- 칩 / pill ---------- */
+  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;
+    background:var(--accent-soft);color:var(--accent-700);white-space:nowrap;letter-spacing:-0.01em}
+
+  .muted{color:var(--sub)}
+  .balance-ok{color:var(--ok);font-weight:800;background:var(--ok-soft);
+    padding:10px 14px;border-radius:var(--r-sm);border:1px solid #c6efd5}
+  .balance-bad{color:var(--bad);font-weight:800;background:#fdecec;
+    padding:10px 14px;border-radius:var(--r-sm);border:1px solid #f6c9c9}
+  .empty{text-align:center;color:var(--sub);padding:48px 30px;font-size:13.5px;
+    background:var(--bg);border:1px dashed var(--line);border-radius:var(--r)}
+
+  /* ---------- 요약 박스 ---------- */
+  .summary{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  .summary .box{flex:1;min-width:140px;
+    background:linear-gradient(180deg,#fbfcfe,#f6f8fc);
+    border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh-sm)}
+  .summary .box .k{font-size:11.5px;color:var(--sub);font-weight:600}
+  .summary .box .v{font-size:20px;font-weight:800;margin-top:4px;letter-spacing:-0.02em;
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+  .del{color:var(--bad);cursor:pointer;font-size:12px;border:1px solid transparent;
+    background:none;padding:4px 8px;border-radius:6px;font-weight:600;transition:all .12s ease}
+  .del:hover{background:#fdecec;border-color:#f6c9c9}
+  .hint{font-size:12.5px;color:var(--sub);line-height:1.5}
+
+  /* ---------- 원장 헤더 ---------- */
+  .acct-head{display:flex;justify-content:space-between;align-items:center;
+    margin:22px 0 8px;gap:12px;flex-wrap:wrap}
+  .acct-head:first-child{margin-top:0}
+  .acct-head h3{margin:0;font-size:14.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .acct-head .muted b{color:var(--ink);font-variant-numeric:tabular-nums}
+  details>summary{cursor:pointer;font-weight:600;padding:6px 0}
+
+  /* ---------- 신고 캘린더 ---------- */
+  .cal-list{display:flex;flex-direction:column;gap:12px}
+  .cal-item{display:flex;align-items:center;gap:16px;border:1px solid var(--line);
+    border-radius:var(--r);padding:14px 18px;background:#fff;box-shadow:var(--sh-sm);
+    position:relative;overflow:hidden;transition:transform .12s ease, box-shadow .15s ease}
+  .cal-item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--line)}
+  .cal-item:hover{transform:translateY(-1px);box-shadow:var(--sh)}
+  .cal-item.soon{border-color:#f6c9c9;background:linear-gradient(180deg,#fff,#fff7f6)}
+  .cal-item.soon::before{background:linear-gradient(180deg,#ef4444,#dc2626)}
+  .cal-item.upcoming{border-color:#f5d99a;background:linear-gradient(180deg,#fff,#fffbf2)}
+  .cal-item.upcoming::before{background:linear-gradient(180deg,#f59e0b,#d97706)}
+  .cal-dday{min-width:78px;text-align:center;font-weight:800;font-size:20px;
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum";letter-spacing:-0.02em;padding-left:6px}
+  .cal-dday small{display:block;font-size:10.5px;font-weight:700;color:var(--sub);
+    margin-top:2px;letter-spacing:.02em}
+  .cal-body{flex:1;min-width:0}
+  .cal-body .t{font-weight:800;font-size:14.5px;letter-spacing:-0.01em}
+  .cal-body .d{font-size:12.5px;color:var(--sub);margin-top:3px;line-height:1.5}
+  .cal-date{text-align:right;font-size:13.5px;color:var(--ink);font-weight:700;min-width:96px;
+    font-variant-numeric:tabular-nums;line-height:1.5}
+  .cal-note{font-size:12.5px;color:var(--sub);margin:18px 2px 0;line-height:1.7;
+    background:var(--bg);border:1px solid var(--line-soft);border-radius:var(--r);padding:14px 16px}
+  .cal-note b{color:var(--ink-2)}
+  /* ---------- 부가세 신고 ---------- */
+  .vat-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .vat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:18px}
+  .vat-card{border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;background:#fff;box-shadow:var(--sh-sm)}
+  .vat-card.vat-empty{opacity:.55}
+  .vat-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .vat-due{font-size:12px;color:var(--sub)}
+  .vat-table{width:100%}
+  .vat-table td{padding:7px 0;border-bottom:1px solid var(--line-soft);font-size:13px}
+  .vat-table tr:last-child td{border-bottom:none}
+  .vat-table .vat-pay td{padding-top:10px;border-top:2px solid var(--ink);font-size:14px}
+  .vat-warn{margin-top:10px;background:var(--warn-soft);border:1px solid #f4d9a8;color:var(--warn);
+    border-radius:var(--r-sm);padding:9px 12px;font-size:12px;line-height:1.5}
+  /* ---------- 공유/동기화 ---------- */
+  .sync-card{border-color:#d9e2f2;background:linear-gradient(180deg,#fbfdff,#f6f9fe)}
+  .sync-status{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:12px;
+    display:inline-flex;align-items:center;gap:7px}
+  .sync-status::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--sub-2);flex:none}
+  .sync-status.on{color:var(--ok)} .sync-status.on::before{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}
+  .sync-status.off::before{background:#cbd2dc}
+  .sync-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .sync-controls #passInput{flex:1;min-width:220px;width:auto}
+  .sync-hint{font-size:12.5px;margin-top:10px;min-height:16px}
+  .sync-help{margin-top:14px;border-top:1px solid var(--line-soft);padding-top:10px}
+  .sync-help summary{font-size:12.5px;color:var(--accent-700);font-weight:600}
+  .sync-help ol{margin:10px 0 2px;padding-left:20px;color:var(--ink-2);font-size:12.5px;line-height:1.8}
+  .sync-help b{color:var(--ink)}
+  /* ---------- 한계 고지 배너 ---------- */
+  .notice{background:var(--warn-soft);border:1px solid #f4d9a8;border-radius:var(--r);
+    padding:14px 18px;margin-bottom:20px;font-size:12.5px;line-height:1.75;color:#7a4d08}
+  .notice b{color:#5c3a04}
+
+  @media (max-width:560px){
+    .wrap{padding:20px 14px 40px}
+    .card{padding:18px 16px;border-radius:var(--r)}
+    .cal-item{flex-wrap:wrap;gap:10px}
+    .cal-date{text-align:left;min-width:0}
+    th,td{padding:9px 8px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>장부</h1>
+  <span class="sub">법인 복식부기 장부 · 입력하면 분개가 자동 생성됩니다</span>
+  <span class="sub" style="margin-left:auto">12월 결산 법인 기준</span>
+</header>
+
+<div class="wrap">
+
+  <!-- 공유/동기화 카드 -->
+  <div class="card sync-card">
+    <h2>🔐 공유 · 동기화</h2>
+    <div class="sync-status" id="syncStatus">미연결 — 이 컴퓨터에만 저장 중</div>
+    <div class="sync-controls">
+      <input type="password" id="passInput" placeholder="공유 암호 (두 사람이 같은 암호 사용)" autocomplete="off">
+      <button class="btn sm" id="connectBtn">공유 파일 열기</button>
+      <button class="btn ghost sm" id="syncBtn" disabled>지금 동기화</button>
+    </div>
+    <div class="sync-hint" id="syncMsg"></div>
+  </div>
+
+  <!-- 한계 고지 -->
+  <div class="notice">
+    <b>⚠ 이 장부는 평소 거래를 정리하는 보조 도구입니다.</b>
+    화면의 <b>당기순손익은 결산·세무조정 전 잠정치</b>로, 그대로 <b>법인세 과세표준이 아닙니다</b>.
+    감가상각·접대비 한도·가지급금·손금불산입 항목 등은 반영되지 않으므로,
+    <b>법인세 신고는 반드시 세무대리인 또는 홈택스 신고도움자료로 확정</b>하세요.
+  </div>
+
+  <!-- 입력 카드 -->
+  <div class="card">
+    <h2>거래 입력</h2>
+    <div class="grid">
+      <div>
+        <label>날짜</label>
+        <input type="date" id="date">
+      </div>
+      <div>
+        <label>거래 유형</label>
+        <select id="type"></select>
+      </div>
+      <div id="subWrap" style="display:none">
+        <label id="subLabel">세부 계정</label>
+        <select id="sub"></select>
+      </div>
+      <div id="payWrap" style="display:none">
+        <label>결제 수단</label>
+        <select id="pay">
+          <option value="보통예금">보통예금(계좌)</option>
+          <option value="현금">현금</option>
+          <option value="미지급금">법인카드(미지급)</option>
+        </select>
+      </div>
+      <div>
+        <label id="amountLabel">금액 (원)</label>
+        <input type="text" id="amount" inputmode="numeric" placeholder="200000">
+      </div>
+      <div id="whWrap" style="display:none">
+        <label>공제액 (원천세·4대보험 본인부담)</label>
+        <input type="text" id="wh" inputmode="numeric" placeholder="예: 198000">
+      </div>
+      <div>
+        <label>적요 (메모)</label>
+        <input type="text" id="memo" placeholder="예: 디자인 용역 대금">
+      </div>
+    </div>
+    <div class="row-check" id="vatRow">
+      <input type="checkbox" id="vat">
+      <label for="vat" style="margin:0;color:var(--ink);font-weight:600">부가세 별도 (입력금액=공급가액, 부가세 10% 자동 분리)</label>
+    </div>
+
+    <div class="vat-warn" id="discWarn" style="display:none;margin-top:14px">⚠ <b>공유 파일 미연결</b> — 지금 입력하면 이 기기에만 저장되고 상대방과 동기화되지 않습니다. 위 <b>🔐 공유·동기화</b>에서 <b>[공유 파일 열기]</b>로 먼저 연결하세요.</div>
+
+    <div class="preview" id="preview"></div>
+
+    <div class="actions">
+      <button class="btn" id="addBtn">장부에 기록</button>
+      <span class="hint" id="formHint"></span>
+    </div>
+  </div>
+
+  <!-- 결과 영역 -->
+  <div class="card">
+    <div class="tabs">
+      <div class="tab active" data-view="journal">분개장</div>
+      <div class="tab" data-view="ledger">계정별 원장</div>
+      <div class="tab" data-view="trial">합계잔액시산표</div>
+      <div class="tab" data-view="monthly">월별 요약</div>
+      <div class="tab" data-view="depreciation">🏗️ 감가상각</div>
+      <div class="tab" data-view="vat">🧾 부가세 신고</div>
+      <div class="tab" data-view="calendar">📅 신고 캘린더</div>
+    </div>
+    <div id="view"></div>
+    <div class="actions">
+      <button class="btn ghost sm" id="exportBtn">엑셀(CSV)로 내보내기</button>
+      <button class="btn ghost sm" id="clearBtn">전체 삭제</button>
+      <span class="hint">데이터는 이 브라우저에 자동 저장됩니다(localStorage).</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ---------- 계정 정의: 계정명 -> 분류 ---------- */
+const ACCT_TYPE = {
+  '현금':'자산','보통예금':'자산','외상매출금':'자산','비품':'자산','기계장치':'자산','차량운반구':'자산','영업용차량':'자산','임차보증금':'자산','부가세대급금':'자산',
+  '차입금':'부채','미지급금':'부채','부가세예수금':'부채','예수금':'부채',
+  '자본금':'자본',
+  '매출':'수익','이자수익':'수익',
+  '급여':'비용','임차료':'비용','통신비':'비용','수도광열비':'비용','소모품비':'비용','복리후생비':'비용',
+  '지급수수료':'비용','광고선전비':'비용','여비교통비':'비용','차량유지비':'비용','세금과공과':'비용','접대비':'비용','이자비용':'비용','감가상각비':'비용',
+  '감가상각누계액':'자산'   // 자산 차감계정(대변 잔액)
+};
+const EXPENSE_ACCTS = ['지급수수료','임차료','통신비','수도광열비','소모품비','복리후생비','광고선전비','여비교통비','차량유지비','세금과공과','접대비'];
+const ASSET_BUY_ACCTS = ['비품','기계장치','차량운반구','영업용차량','임차보증금'];
+// 매입세액 불공제 계정(부가세법 §39): 접대비·비영업용 소형승용차 관련 → 부가세를 공제받지 못하고 원가에 산입
+const NO_VAT_DEDUCT = new Set(['접대비','차량유지비','차량운반구']);
+// 감가상각 대상 자산과 기본 내용연수(년)
+const DEPRECIABLE = new Set(['비품','기계장치','차량운반구','영업용차량']);
+const DEFAULT_LIFE = {'비품':5,'기계장치':5,'차량운반구':5,'영업용차량':5};
+// 드롭다운 표시용 라벨(계정명은 그대로 유지)
+const SUB_LABEL = {'차량운반구':'차량운반구(비영업용 승용차)','영업용차량':'영업용차량(화물·승합·경차 등)'};
+
+/* ---------- 거래 유형 정의 ----------
+   build(p) -> 분개 라인 배열. p={amount, vat, pay, sub, memo}
+   각 라인: {acct, debit, credit}
+*/
+const TYPES = {
+  '매출 (국내 과세 10%)': {
+    pay:true, payOptions:['보통예금','현금','외상매출금'], vatable:true,
+    build(p){
+      const net=p.amount, tax=p.vat?Math.round(p.amount*0.1):0, gross=net+tax;
+      const recv = p.pay==='외상매출금'?'외상매출금':p.pay; // 보통예금/현금/외상매출금
+      const lines=[{acct:recv,debit:gross,credit:0},{acct:'매출',debit:0,credit:net}];
+      if(tax) lines.push({acct:'부가세예수금',debit:0,credit:tax});
+      return lines;
+    }
+  },
+  '해외 광고·수출 수익 (영세율 0%)': {
+    pay:true, payOptions:['보통예금','현금','외상매출금'], zero:true,
+    build(p){
+      const recv = p.pay==='외상매출금'?'외상매출금':p.pay;
+      return [{acct:recv,debit:p.amount,credit:0},{acct:'매출',debit:0,credit:p.amount}]; // 부가세 0%, 예수금 없음
+    }
+  },
+  '비용 지출': {
+    sub:true, subLabel:'비용 계정', subOptions:EXPENSE_ACCTS, pay:true, vatable:true,
+    build(p){
+      const tax=p.vat?Math.round(p.amount*0.1):0, gross=p.amount+tax, noDed=NO_VAT_DEDUCT.has(p.sub);
+      const lines=[{acct:p.sub,debit:noDed?gross:p.amount,credit:0}];   // 불공제면 부가세를 비용에 산입
+      if(tax && !noDed) lines.push({acct:'부가세대급금',debit:tax,credit:0});
+      lines.push({acct:p.pay,debit:0,credit:gross});
+      return lines;
+    }
+  },
+  '비품·자산 구입': {
+    sub:true, subLabel:'자산 계정', subOptions:ASSET_BUY_ACCTS, pay:true, vatable:true,
+    build(p){
+      const tax=p.vat?Math.round(p.amount*0.1):0, gross=p.amount+tax, noDed=NO_VAT_DEDUCT.has(p.sub);
+      const lines=[{acct:p.sub,debit:noDed?gross:p.amount,credit:0}];   // 불공제(승용차)면 부가세를 취득원가에 산입
+      if(tax && !noDed) lines.push({acct:'부가세대급금',debit:tax,credit:0});
+      lines.push({acct:p.pay,debit:0,credit:gross});
+      return lines;
+    }
+  },
+  '급여 지급 (원천징수)': {
+    pay:true, payOptions:['보통예금','현금'], wh:true,
+    build(p){
+      const gross=p.amount, wh=p.wh||0, net=gross-wh;
+      const lines=[{acct:'급여',debit:gross,credit:0}];
+      if(wh>0) lines.push({acct:'예수금',debit:0,credit:wh});   // 원천세+4대보험 근로자부담분
+      lines.push({acct:p.pay,debit:0,credit:net});
+      return lines;
+    }
+  },
+  '예수금 납부 (원천세·4대보험)': {
+    build(p){ return [{acct:'예수금',debit:p.amount,credit:0},{acct:'보통예금',debit:0,credit:p.amount}]; }
+  },
+  '법인카드 대금 결제 (미지급금 상환)': {
+    build(p){ return [{acct:'미지급금',debit:p.amount,credit:0},{acct:'보통예금',debit:0,credit:p.amount}]; }
+  },
+  '자본금 입금': {
+    build(p){ return [{acct:'보통예금',debit:p.amount,credit:0},{acct:'자본금',debit:0,credit:p.amount}]; }
+  },
+  '대출 받음': {
+    build(p){ return [{acct:'보통예금',debit:p.amount,credit:0},{acct:'차입금',debit:0,credit:p.amount}]; }
+  },
+  '대출 상환': {
+    build(p){ return [{acct:'차입금',debit:p.amount,credit:0},{acct:'보통예금',debit:0,credit:p.amount}]; }
+  },
+  '이자 비용 지급': {
+    build(p){ return [{acct:'이자비용',debit:p.amount,credit:0},{acct:'보통예금',debit:0,credit:p.amount}]; }
+  },
+  '통장→현금 인출': {
+    build(p){ return [{acct:'현금',debit:p.amount,credit:0},{acct:'보통예금',debit:0,credit:p.amount}]; }
+  },
+  '현금→통장 입금': {
+    build(p){ return [{acct:'보통예금',debit:p.amount,credit:0},{acct:'현금',debit:0,credit:p.amount}]; }
+  }
+};
+
+/* ---------- 상태 ---------- */
+const KEY='jangbu_entries_v1';
+const DKEY='jangbu_deleted_v1';
+let entries = load();
+let deleted = loadDeleted();          // 삭제된 거래 id 목록(두 기기 간 삭제 동기화용)
+let curView='journal';
+let vatYear=null;
+let bookYear=null;   // 시산표·손익·원장·월별에 적용할 사업연도
+// 공유 파일 동기화 상태
+let fileHandle=null, cryptoKey=null, fileSalt=null;
+
+const LIFE_KEY='jangbu_assetlife_v1';
+let assetLife = (()=>{try{return JSON.parse(localStorage.getItem(LIFE_KEY))||{}}catch(e){return {}}})();
+function load(){ try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return []} }
+function loadDeleted(){ try{return JSON.parse(localStorage.getItem(DKEY))||[]}catch(e){return []} }
+function saveLocal(){ localStorage.setItem(KEY, JSON.stringify(entries)); localStorage.setItem(DKEY, JSON.stringify(deleted)); }
+function save(){ saveLocal(); pushToFile(); }   // 로컬 저장 + (연결돼 있으면) 공유 파일에 반영
+function won(n){ return (n||0).toLocaleString('ko-KR'); }
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+/* ---------- 폼 초기화 ---------- */
+const $=id=>document.getElementById(id);
+const typeSel=$('type');
+Object.keys(TYPES).forEach(t=>{ const o=document.createElement('option');o.value=t;o.textContent=t;typeSel.appendChild(o); });
+$('date').value=todayStr();
+
+function syncForm(){
+  const t=TYPES[typeSel.value];
+  // 세부 계정
+  if(t.sub){ $('subWrap').style.display='';$('subLabel').textContent=t.subLabel;
+    const s=$('sub');s.innerHTML='';t.subOptions.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=SUB_LABEL[a]||a;s.appendChild(o);});
+  } else $('subWrap').style.display='none';
+  // 결제수단
+  if(t.pay){ $('payWrap').style.display='';
+    const opts = t.payOptions||['보통예금','현금','미지급금'];
+    const p=$('pay');p.innerHTML='';
+    opts.forEach(a=>{const o=document.createElement('option');o.value=a;
+      o.textContent = a==='미지급금'?'법인카드(미지급)':(a==='보통예금'?'보통예금(계좌)':a);p.appendChild(o);});
+  } else $('payWrap').style.display='none';
+  // 급여 원천징수 공제액
+  $('whWrap').style.display = t.wh?'':'none';
+  $('amountLabel').textContent = t.wh?'총급여 (세전, 원)':'금액 (원)';
+  // 부가세 체크박스는 과세 거래(매출·비용·자산구입)에서만
+  if(t.vatable){ $('vatRow').style.display=''; }
+  else { $('vatRow').style.display='none'; $('vat').checked=false; }
+  renderPreview();
+}
+
+function readForm(){
+  const t=TYPES[typeSel.value];
+  const amount=parseInt(($('amount').value||'').replace(/[^0-9]/g,''),10)||0;
+  const wh=parseInt(($('wh').value||'').replace(/[^0-9]/g,''),10)||0;
+  return { amount, wh, vat:$('vat').checked, pay:t.pay?$('pay').value:null, sub:t.sub?$('sub').value:null, memo:$('memo').value.trim() };
+}
+
+function renderPreview(){
+  const t=TYPES[typeSel.value], p=readForm();
+  if(!p.amount){ $('preview').innerHTML='<span class="muted">금액을 입력하면 자동 분개 미리보기가 표시됩니다.</span>'; return; }
+  const lines=t.build(p);
+  let h='<div class="muted" style="margin-bottom:6px">자동 분개 미리보기</div>';
+  lines.forEach(l=>{
+    h+=`<div class="ln"><span class="${l.debit?'deb':'cre'}">${l.debit?'(차) ':'(대) &nbsp;&nbsp;&nbsp;'}${l.acct}</span><span>${won(l.debit||l.credit)}</span></div>`;
+  });
+  if(p.vat && NO_VAT_DEDUCT.has(p.sub))
+    h+=`<div class="vat-warn" style="margin-top:10px">⚠ <b>매입세액 불공제</b> 항목입니다(접대비·승용차 등). 부가세는 공제받지 못하고 ${p.sub} 원가에 포함됩니다.</div>`;
+  if(t.wh)
+    h+=`<div class="hint" style="margin-top:8px">※ 공제액은 원천세+4대보험 본인부담분입니다. 매월 다음 달 10일까지 원천세 신고·납부가 별도로 필요합니다.</div>`;
+  if(t.zero)
+    h+=`<div class="hint" style="margin-top:8px">※ 외화 수익(애드몹·애드센스 등)은 <b>입금일 기준 원화 환산액(실제 통장 입금액)</b>으로 입력하세요. 외화 금액 그대로 넣으면 안 됩니다.</div>`;
+  $('preview').innerHTML=h;
+}
+
+typeSel.addEventListener('change',syncForm);
+['amount','wh','vat','sub','pay'].forEach(id=>{ const e=$(id); e&&e.addEventListener('input',renderPreview); e&&e.addEventListener('change',renderPreview); });
+
+/* ---------- 기록 ---------- */
+let sessionWarnedDisc=false;
+function isConnected(){ return !!(fileHandle && cryptoKey); }
+function refreshDiscWarn(){ const w=$('discWarn'); if(w) w.style.display = isConnected()?'none':''; }
+$('addBtn').addEventListener('click',()=>{
+  const t=TYPES[typeSel.value], p=readForm();
+  if(!p.amount){ flash('금액을 입력하세요.'); return; }
+  if(!isConnected() && !sessionWarnedDisc){
+    if(!confirm('공유 파일에 연결되어 있지 않습니다.\n지금 입력하면 이 기기에만 저장되고 상대방과 공유되지 않습니다.\n\n그래도 입력하시겠습니까?')) return;
+    sessionWarnedDisc=true;
+  }
+  const lines=t.build(p);
+  entries.push({ id:Date.now()+Math.random().toString(16).slice(2), date:$('date').value, type:typeSel.value, memo:p.memo, vat:p.vat, zero:!!t.zero, lines });
+  entries.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  save();
+  $('amount').value='';$('wh').value='';$('memo').value='';$('vat').checked=false;
+  renderPreview(); render();
+  flash('기록되었습니다 ✓');
+});
+function flash(msg){ const h=$('formHint');h.textContent=msg;h.style.color=msg.includes('✓')?'var(--ok)':'var(--bad)';setTimeout(()=>h.textContent='',2500); }
+
+/* ---------- 뷰 전환 ---------- */
+document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active'); curView=tab.dataset.view; render();
+}));
+
+/* ---------- 렌더 ---------- */
+function render(){
+  if(curView==='journal') renderJournal();
+  else if(curView==='ledger') renderLedger();
+  else if(curView==='trial') renderTrial();
+  else if(curView==='monthly') renderMonthly();
+  else if(curView==='depreciation') renderDepreciation();
+  else if(curView==='calendar') renderCalendar();
+  else renderVat();
+}
+
+/* ---------- 신고 캘린더 (12월 결산 법인 기준) ---------- */
+const FILINGS = [
+  {m:1, d:25, t:'부가가치세 2기 확정신고·납부', d2:'전년 10~12월 매출·매입 신고. 매출 없어도 무실적 신고 필요.'},
+  {m:3, d:31, t:'법인세 신고·납부 (가장 중요)', d2:'전년도 1년 결산. 적자·무실적이어도 반드시 신고.'},
+  {m:4, d:25, t:'부가가치세 1기 예정신고·납부', d2:'1~3월 매출·매입 신고.'},
+  {m:4, d:30, t:'법인 지방소득세 신고·납부', d2:'법인세의 약 10%. 법인세 신고 다음 달 말일.'},
+  {m:7, d:25, t:'부가가치세 1기 확정신고·납부', d2:'4~6월 매출·매입 신고.'},
+  {m:8, d:31, t:'법인세 중간예납', d2:'전년 세액의 절반을 미리 납부(소규모 법인은 면제될 수 있음).'},
+  {m:10, d:25, t:'부가가치세 2기 예정신고·납부', d2:'7~9월 매출·매입 신고.'},
+];
+
+function renderCalendar(){
+  const now=new Date();
+  const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  // 각 항목의 '다음 마감일' 계산 (이미 지났으면 내년)
+  const items=FILINGS.map(f=>{
+    let due=new Date(now.getFullYear(),f.m-1,f.d);
+    if(due<today) due=new Date(now.getFullYear()+1,f.m-1,f.d);
+    const dday=Math.round((due-today)/86400000);
+    return {...f,due,dday};
+  }).sort((a,b)=>a.dday-b.dday);
+
+  const fmt=dt=>dt.getFullYear()+'.'+String(dt.getMonth()+1).padStart(2,'0')+'.'+String(dt.getDate()).padStart(2,'0');
+  const wd=['일','월','화','수','목','금','토'];
+
+  let h='<div class="cal-list">';
+  items.forEach(it=>{
+    const cls = it.dday<=14?'soon':it.dday<=30?'upcoming':'';
+    const label = it.dday===0?'오늘':('D-'+it.dday);
+    h+=`<div class="cal-item ${cls}">
+      <div class="cal-dday" style="color:${it.dday<=14?'var(--bad)':it.dday<=30?'#b45309':'var(--ink)'}">${label}<small>${it.dday<=30?'곧 마감':'남음'}</small></div>
+      <div class="cal-body"><div class="t">${it.t}</div><div class="d">${it.d2}</div></div>
+      <div class="cal-date">${fmt(it.due)}<br><span class="muted">(${wd[it.due.getDay()]})</span></div>
+    </div>`;
+  });
+  h+='</div>';
+  h+=`<p class="cal-note">
+    ※ <b>12월 결산 법인</b> 기준입니다. 결산월이 다르면 법인세 신고는 '결산월 말일부터 3개월 이내'로 바뀝니다.<br>
+    ※ 마감일이 토·일·공휴일이면 <b>다음 영업일</b>로 자동 연장됩니다.<br>
+    ※ 직원에게 급여를 지급하면 <b>원천세</b>를 매월 다음 달 10일까지 신고해야 합니다(직원 없으면 해당 없음).
+  </p>`;
+  $('view').innerHTML=h;
+}
+
+function renderJournal(){
+  if(!entries.length){ $('view').innerHTML='<div class="empty">아직 거래가 없습니다. 위에서 첫 거래를 입력해보세요.</div>'; return; }
+  let h='<table><thead><tr><th>날짜</th><th>유형</th><th>차변 계정</th><th class="num">차변</th><th>대변 계정</th><th class="num">대변</th><th>적요</th><th></th></tr></thead><tbody>';
+  entries.forEach(e=>{
+    const debs=e.lines.filter(l=>l.debit), cres=e.lines.filter(l=>l.credit);
+    const rows=Math.max(debs.length,cres.length);
+    for(let i=0;i<rows;i++){
+      const d=debs[i], c=cres[i];
+      h+='<tr>';
+      if(i===0){ h+=`<td rowspan="${rows}">${e.date}</td><td rowspan="${rows}"><span class="pill">${e.type}</span></td>`; }
+      h+=`<td>${d?d.acct:''}</td><td class="num deb">${d?won(d.debit):''}</td>`;
+      h+=`<td>${c?c.acct:''}</td><td class="num cre">${c?won(c.credit):''}</td>`;
+      if(i===0){ h+=`<td rowspan="${rows}" class="muted">${e.memo||''}</td><td rowspan="${rows}"><button class="del" data-id="${e.id}">삭제</button></td>`; }
+      h+='</tr>';
+    }
+  });
+  h+='</tbody></table>';
+  $('view').innerHTML=h;
+  document.querySelectorAll('.del').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.id;
+    // 자산 구입을 삭제하면 그 자산에 연결된 감가상각 분개도 함께 삭제(고아 분개 방지)
+    const linked=entries.filter(e=>e.dep && e.dep.assetId===id).map(e=>e.id);
+    if(linked.length && !confirm('이 거래에 연결된 감가상각 분개 '+linked.length+'건도 함께 삭제됩니다. 계속할까요?')) return;
+    deleted.push(id, ...linked);
+    entries=entries.filter(e=>e.id!==id && !(e.dep && e.dep.assetId===id));
+    save(); render();
+  }));
+}
+
+const IS_PL = t => (t==='수익'||t==='비용');   // 손익계정 여부
+function bookYears(){
+  const ys=[...new Set(entries.map(e=>e.date.slice(0,4)))];
+  const cur=String(new Date().getFullYear()); if(!ys.includes(cur)) ys.push(cur);
+  return ys.sort();
+}
+function ensureBookYear(){
+  const ys=bookYears();
+  if(!bookYear || !ys.includes(bookYear)){
+    const withData=[...new Set(entries.map(e=>e.date.slice(0,4)))].sort();
+    bookYear = withData.length?withData[withData.length-1]:String(new Date().getFullYear());
+  }
+}
+function yearBar(label){
+  const opts=bookYears().map(y=>`<option value="${y}" ${y===bookYear?'selected':''}>${y}년 (사업연도)</option>`).join('');
+  return `<div class="vat-bar"><div><b>${label}</b> <span class="muted">사업연도(1.1~12.31) 기준</span></div><select id="bookYearSel" style="width:auto;min-width:150px">${opts}</select></div>`;
+}
+function wireYearBar(){ const s=$('bookYearSel'); if(s) s.addEventListener('change',()=>{ bookYear=s.value; render(); }); }
+
+// 선택 연도 기준 계정 잔액. 손익계정=당해연도 발생분, 재무상태표 계정=기말 누적잔액
+function accountBalances(Y){
+  const map={};
+  entries.forEach(e=>{ const y=e.date.slice(0,4); e.lines.forEach(l=>{
+    const type=ACCT_TYPE[l.acct]||'기타';
+    const include = IS_PL(type) ? (y===Y) : (y<=Y);   // 자산·부채·자본은 누적, 수익·비용은 당해연도만
+    if(!include) return;
+    const a=map[l.acct]||(map[l.acct]={type,debit:0,credit:0});
+    a.debit+=l.debit||0; a.credit+=l.credit||0;
+  });});
+  return map;
+}
+// 전기말까지 누적 당기순이익(= 전기이월이익잉여금)
+function priorRetained(Y){
+  let v=0;
+  entries.forEach(e=>{ if(e.date.slice(0,4)<Y) e.lines.forEach(l=>{ const t=ACCT_TYPE[l.acct];
+    if(t==='수익')v+=l.credit-l.debit; if(t==='비용')v-=l.debit-l.credit; }); });
+  return v;
+}
+
+function renderLedger(){
+  if(!entries.length){ $('view').innerHTML='<div class="empty">거래가 없습니다.</div>'; return; }
+  ensureBookYear(); const Y=bookYear;
+  const byAcct={}, opening={};
+  entries.forEach(e=>{ const y=e.date.slice(0,4); e.lines.forEach(l=>{
+    const type=ACCT_TYPE[l.acct]||'기타';
+    if(!IS_PL(type) && y<Y){ // 재무상태표 계정의 전기이월
+      const dn=(type==='자산'); opening[l.acct]=(opening[l.acct]||0)+(dn?(l.debit-l.credit):(l.credit-l.debit));
+    }
+    if(y===Y){ (byAcct[l.acct]=byAcct[l.acct]||[]).push({date:e.date,memo:e.memo,type:e.type,debit:l.debit,credit:l.credit}); }
+  });});
+  const order=['자산','부채','자본','수익','비용','기타'];
+  const accts=[...new Set([...Object.keys(byAcct),...Object.keys(opening)])].sort((a,b)=>{
+    const ta=order.indexOf(ACCT_TYPE[a]||'기타'), tb=order.indexOf(ACCT_TYPE[b]||'기타');
+    return ta-tb || a.localeCompare(b,'ko');
+  });
+  let h=yearBar('계정별 원장');
+  if(!accts.length){ h+='<div class="empty">'+Y+'년 거래가 없습니다.</div>'; $('view').innerHTML=h; wireYearBar(); return; }
+  accts.forEach(a=>{
+    const type=ACCT_TYPE[a]||'기타', debitNormal=(type==='자산'||type==='비용');
+    let bal=opening[a]||0, h2='';
+    if(!IS_PL(type) && (opening[a]||0)!==0)
+      h2+=`<tr><td>${Y}-01-01</td><td class="muted">전기이월</td><td class="num"></td><td class="num"></td><td class="num">${won(bal)}</td></tr>`;
+    (byAcct[a]||[]).forEach(r=>{ bal+= debitNormal ? (r.debit-r.credit) : (r.credit-r.debit);
+      h2+=`<tr><td>${r.date}</td><td class="muted">${r.memo||r.type}</td><td class="num deb">${r.debit?won(r.debit):''}</td><td class="num cre">${r.credit?won(r.credit):''}</td><td class="num">${won(bal)}</td></tr>`;
+    });
+    h+=`<div class="acct-head"><h3>${a} <span class="pill">${type}</span></h3><div class="muted">잔액 <b>${won(bal)}</b> 원</div></div>`;
+    h+=`<table><thead><tr><th>날짜</th><th>적요</th><th class="num">차변</th><th class="num">대변</th><th class="num">잔액</th></tr></thead><tbody>${h2}</tbody></table>`;
+  });
+  $('view').innerHTML=h; wireYearBar();
+}
+
+function renderTrial(){
+  if(!entries.length){ $('view').innerHTML='<div class="empty">거래가 없습니다.</div>'; return; }
+  ensureBookYear(); const Y=bookYear;
+  const map=accountBalances(Y);
+  const order=['자산','부채','자본','수익','비용','기타'];
+  const accts=Object.keys(map).sort((a,b)=>order.indexOf(map[a].type)-order.indexOf(map[b].type)||a.localeCompare(b,'ko'));
+  let h=yearBar('합계잔액시산표');
+  if(!accts.length){ h+='<div class="empty">'+Y+'년 거래가 없습니다.</div>'; $('view').innerHTML=h; wireYearBar(); return; }
+  let td=0,tc=0;
+  h+='<table><thead><tr><th class="num">차변 잔액</th><th>계정과목</th><th>분류</th><th class="num">대변 잔액</th></tr></thead><tbody>';
+  accts.forEach(a=>{
+    const m=map[a], debitNormal=(m.type==='자산'||m.type==='비용');
+    const net = debitNormal ? (m.debit-m.credit) : (m.credit-m.debit);
+    const dCol = net>0&&debitNormal? net : (net<0&&!debitNormal? -net:0);
+    const cCol = net>0&&!debitNormal? net : (net<0&&debitNormal? -net:0);
+    td+=dCol; tc+=cCol;
+    h+=`<tr><td class="num deb">${dCol?won(dCol):''}</td><td>${a}</td><td><span class="pill">${m.type}</span></td><td class="num cre">${cCol?won(cCol):''}</td></tr>`;
+  });
+  // 전기이월이익잉여금(전기말 누적손익)을 자본으로 반영 → 시산표 차대 일치
+  const pr=priorRetained(Y);
+  if(pr!==0){ const dCol=pr<0?-pr:0, cCol=pr>0?pr:0; td+=dCol; tc+=cCol;
+    h+=`<tr><td class="num deb">${dCol?won(dCol):''}</td><td>전기이월이익잉여금</td><td><span class="pill">자본</span></td><td class="num cre">${cCol?won(cCol):''}</td></tr>`;
+  }
+  h+=`</tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--ink)"><td class="num deb">${won(td)}</td><td colspan="2">합계</td><td class="num cre">${won(tc)}</td></tr></tfoot></table>`;
+  const balanced = td===tc;
+  h+=`<p style="margin-top:12px" class="${balanced?'balance-ok':'balance-bad'}">${balanced?'✓ 차변 합계 = 대변 합계 (분개 형식 일치)':'✗ 차변·대변 불일치 — 기록 오류 가능'}</p>`;
+  h+=`<p class="hint" style="margin-top:4px">※ 합계 일치는 분개 형식만 확인하며, 계정 선택·금액의 정확성은 보장하지 않습니다.</p>`;
+  // 당해연도 손익
+  let income=0,expense=0;
+  accts.forEach(a=>{ const m=map[a]; if(m.type==='수익')income+=m.credit-m.debit; if(m.type==='비용')expense+=m.debit-m.credit; });
+  h+=`<div class="summary" style="margin-top:14px">
+    <div class="box"><div class="k">${Y}년 총 수익</div><div class="v">${won(income)}</div></div>
+    <div class="box"><div class="k">${Y}년 총 비용</div><div class="v">${won(expense)}</div></div>
+    <div class="box"><div class="k">당기순손익 (잠정)</div><div class="v" style="color:${income-expense>=0?'var(--ok)':'var(--bad)'}">${won(income-expense)}</div></div>
+  </div>`;
+  h+=`<div class="vat-warn" style="margin-top:14px">⚠ 이 <b>당기순손익은 결산조정·세무조정 전 잠정치</b>입니다. 감가상각·접대비 한도·손금불산입 세금 등을 반영하지 않았으므로 <b>그대로 법인세 과세표준이 아닙니다</b>. 실제 법인세 신고는 세무대리인 또는 홈택스 신고도움자료로 확정하세요.</div>`;
+  $('view').innerHTML=h; wireYearBar();
+}
+
+function renderMonthly(){
+  if(!entries.length){ $('view').innerHTML='<div class="empty">거래가 없습니다.</div>'; return; }
+  ensureBookYear(); const Y=bookYear;
+  const m={};
+  for(let i=1;i<=12;i++) m[Y+'-'+String(i).padStart(2,'0')]={income:0,expense:0};
+  entries.forEach(e=>{ if(e.date.slice(0,4)!==Y) return; const key=e.date.slice(0,7); const o=m[key]; if(!o) return;
+    e.lines.forEach(l=>{ const t=ACCT_TYPE[l.acct]; if(t==='수익')o.income+=l.credit-l.debit; if(t==='비용')o.expense+=l.debit-l.credit; });
+  });
+  let yI=0,yE=0;
+  let h=yearBar('월별 손익 요약');
+  h+='<table><thead><tr><th>월</th><th class="num">수익</th><th class="num">비용</th><th class="num">손익</th></tr></thead><tbody>';
+  Object.keys(m).sort().forEach(k=>{ const o=m[k]; yI+=o.income; yE+=o.expense;
+    h+=`<tr><td>${k}</td><td class="num">${won(o.income)}</td><td class="num">${won(o.expense)}</td><td class="num" style="font-weight:600;color:${o.income-o.expense>=0?'var(--ok)':'var(--bad)'}">${won(o.income-o.expense)}</td></tr>`; });
+  h+=`</tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--ink)"><td>${Y} 합계</td><td class="num">${won(yI)}</td><td class="num">${won(yE)}</td><td class="num" style="color:${yI-yE>=0?'var(--ok)':'var(--bad)'}">${won(yI-yE)}</td></tr></tfoot></table>`;
+  h+='<p class="hint">※ 부가세 신고는 부가세예수금·부가세대급금을, 법인세는 위 연간 손익에서 <b>세무조정을 거쳐</b> 과세표준을 산출합니다(손익=과세표준 아님).</p>';
+  $('view').innerHTML=h; wireYearBar();
+}
+
+/* ---------- 감가상각 (정액법·월할상각) ---------- */
+function depreciableAssets(){
+  const list=[];
+  entries.forEach(e=>{ if(e.dep) return; e.lines.forEach(l=>{
+    if(DEPRECIABLE.has(l.acct) && l.debit>0) list.push({assetId:e.id, acct:l.acct, date:e.date, cost:l.debit, memo:e.memo});
+  });});
+  return list.sort((a,b)=>a.date<b.date?-1:1);
+}
+function lifeKey(a){ return a.assetId+'|'+a.acct; }
+function lifeOf(a){ return assetLife[lifeKey(a)] || DEFAULT_LIFE[a.acct] || 5; }
+function setLife(k,y){ assetLife[k]=y; localStorage.setItem(LIFE_KEY, JSON.stringify(assetLife)); }
+// 취득 후 해당 연도말까지 누적 상각액 (월할, 정액)
+function accumThrough(cost, life, acqYear, acqMonth, year){
+  const lifeMonths=life*12;
+  const monthsHeld = year<acqYear ? 0 : (year-acqYear)*12 + (13-acqMonth);
+  const clamped=Math.min(Math.max(monthsHeld,0), lifeMonths);
+  return clamped>=lifeMonths ? cost : Math.round(cost*clamped/lifeMonths);
+}
+function depForYear(a, life, Y){
+  const ay=+a.date.slice(0,4), am=+a.date.slice(5,7), y=+Y;
+  return accumThrough(a.cost,life,ay,am,y) - accumThrough(a.cost,life,ay,am,y-1);
+}
+function depRecorded(assetId, acct, Y){ return entries.some(e=>e.dep && e.dep.assetId===assetId && e.dep.acct===acct && e.dep.year===Y); }
+function buildDepEntry(a, life, Y){
+  const amt=depForYear(a, life, Y); if(amt<=0) return null;
+  // 결정적 id: 두 기기가 같은 자산·연도를 반영해도 병합 시 자동 중복제거됨
+  return { id:'dep|'+a.assetId+'|'+a.acct+'|'+Y, date:Y+'-12-31', type:'감가상각',
+    memo:`${a.acct} 감가상각 (${Y}년, 내용연수 ${life}년)`, dep:{assetId:a.assetId, acct:a.acct, year:Y},
+    lines:[{acct:'감가상각비',debit:amt,credit:0},{acct:'감가상각누계액',debit:0,credit:amt}] };
+}
+
+function renderDepreciation(){
+  if(!entries.length){ $('view').innerHTML='<div class="empty">거래가 없습니다.</div>'; return; }
+  ensureBookYear(); const Y=bookYear;
+  const assets=depreciableAssets();
+  let h=yearBar('감가상각 (정액법)');
+  if(!assets.length){ h+='<div class="empty">감가상각 대상 자산이 없습니다.<br>“비품·자산 구입”으로 비품·기계장치·차량운반구를 등록하면 여기에 표시됩니다.</div>'; $('view').innerHTML=h; wireYearBar(); return; }
+  let pendingTotal=0, hasPending=false;
+  h+='<table><thead><tr><th>취득일</th><th>자산</th><th class="num">취득원가</th><th>내용연수</th><th class="num">'+Y+'년 상각비</th><th class="num">감가상각누계액</th><th class="num">장부가액(말)</th><th>반영</th></tr></thead><tbody>';
+  assets.forEach((a,i)=>{
+    const life=lifeOf(a), ay=+a.date.slice(0,4), am=+a.date.slice(5,7);
+    const dep=depForYear(a,life,Y), accum=accumThrough(a.cost,life,ay,am,+Y), bookv=a.cost-accum;
+    const recorded=depRecorded(a.assetId,a.acct,Y), future=(+Y<ay);
+    if(dep>0 && !recorded){ hasPending=true; pendingTotal+=dep; }
+    const lifeOpts=[2,3,4,5,6,7,8,10].map(n=>`<option value="${n}" ${n===life?'selected':''}>${n}년</option>`).join('');
+    let status = future ? '<span class="muted">취득 전</span>'
+      : recorded ? '<span style="color:var(--ok);font-weight:600">반영됨 ✓</span>'
+      : dep>0 ? `<button class="btn ghost sm dep-rec" data-i="${i}">반영</button>`
+      : '<span class="muted">상각완료</span>';
+    h+=`<tr>
+      <td>${a.date}</td>
+      <td>${a.acct}${a.memo?`<div class="muted" style="font-size:11px">${a.memo}</div>`:''}</td>
+      <td class="num">${won(a.cost)}</td>
+      <td><select data-life="${lifeKey(a)}" style="width:auto;min-width:72px;padding:6px 8px">${lifeOpts}</select></td>
+      <td class="num deb">${dep>0?won(dep):'–'}</td>
+      <td class="num">${won(accum)}</td>
+      <td class="num">${won(bookv)}</td>
+      <td>${status}</td>
+    </tr>`;
+  });
+  h+='</tbody></table>';
+  if(hasPending) h+=`<div class="actions"><button class="btn sm" id="depAll">${Y}년 감가상각 전체 반영 (총 ${won(pendingTotal)}원)</button><span class="hint">결산일(12/31)자 분개가 생성되어 손익에 반영됩니다.</span></div>`;
+  h+=`<p class="cal-note">
+    ※ <b>정액법</b>(취득원가 ÷ 내용연수)으로 계산하며, <b>취득한 해는 보유 개월수만큼 월할상각</b>합니다.<br>
+    ※ <b>[반영]</b>을 누르면 <code>(차) 감가상각비 / (대) 감가상각누계액</code> 분개가 그 해 12/31자로 기록됩니다. 매년 한 번씩 반영하세요.<br>
+    ※ 취득가 <b>100만원 이하</b> 소액자산은 산 해에 전액 비용처리도 가능합니다(감가상각 생략 가능).<br>
+    ※ 내용연수·상각방법은 세법상 신고 사항이라, 금액이 크면 세무대리인과 확인하세요.
+  </p>`;
+  $('view').innerHTML=h; wireYearBar();
+  document.querySelectorAll('[data-life]').forEach(s=>s.addEventListener('change',()=>{ setLife(s.dataset.life, +s.value); render(); }));
+  document.querySelectorAll('.dep-rec').forEach(b=>b.addEventListener('click',()=>{
+    const a=assets[+b.dataset.i], en=buildDepEntry(a, lifeOf(a), Y);
+    if(en){ entries.push(en); entries.sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:0); save(); render(); }
+  }));
+  const all=$('depAll'); if(all) all.addEventListener('click',()=>{
+    let added=0;
+    assets.forEach(a=>{ if(!depRecorded(a.assetId,a.acct,Y)){ const en=buildDepEntry(a, lifeOf(a), Y); if(en){ entries.push(en); added++; } } });
+    if(added){ entries.sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:0); save(); }
+    render();
+  });
+}
+
+/* ---------- 부가세 신고 도우미 (12월 결산 법인 기준) ---------- */
+const VAT_PERIODS = [
+  {q:'1기 예정', months:[1,2,3],    due:{m:4,d:25},  off:0},
+  {q:'1기 확정', months:[4,5,6],    due:{m:7,d:25},  off:0},
+  {q:'2기 예정', months:[7,8,9],    due:{m:10,d:25}, off:0},
+  {q:'2기 확정', months:[10,11,12], due:{m:1,d:25},  off:1},
+];
+
+function renderVat(){
+  // 연도 선택지 구성
+  const now=new Date(), curY=String(now.getFullYear());
+  const years=[...new Set(entries.map(e=>e.date.slice(0,4)))];
+  if(!years.includes(curY)) years.push(curY);
+  years.sort();
+  if(!vatYear || !years.includes(vatYear)) vatYear=years.includes(curY)?curY:years[years.length-1];
+
+  const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const opts=years.map(y=>`<option value="${y}" ${y===vatYear?'selected':''}>${y}년</option>`).join('');
+
+  let yS=0,yP=0,yPay=0,yZero=0,cards='';
+  VAT_PERIODS.forEach(p=>{
+    let salesTax=0,salesZero=0,salesVat=0,purVat=0,hasTx=false;
+    entries.forEach(e=>{
+      if(e.date.slice(0,4)!==vatYear) return;
+      const m=parseInt(e.date.slice(5,7),10);
+      if(!p.months.includes(m)) return;
+      e.lines.forEach(l=>{
+        if(l.acct==='매출'){ if(e.zero) salesZero+=(l.credit-l.debit); else salesTax+=(l.credit-l.debit); hasTx=true; }
+        if(l.acct==='부가세예수금'){ salesVat+=(l.credit-l.debit); hasTx=true; }
+        if(l.acct==='부가세대급금'){ purVat+=(l.debit-l.credit); hasTx=true; }
+      });
+    });
+    const payable=salesVat-purVat;
+    yS+=salesVat; yP+=purVat; yPay+=payable; yZero+=salesZero;
+
+    // 신고기한 D-day
+    const dueY=parseInt(vatYear,10)+p.off;
+    const due=new Date(dueY,p.due.m-1,p.due.d);
+    const dday=Math.round((due-today)/86400000);
+    const dueStr=`${dueY}.${String(p.due.m).padStart(2,'0')}.${String(p.due.d).padStart(2,'0')}`;
+    const ddayLabel = dday<0?'신고기한 지남':dday===0?'오늘 마감':`D-${dday}`;
+    const ddayColor = dday<0?'var(--sub)':dday<=14?'var(--bad)':dday<=30?'var(--warn)':'var(--ink-2)';
+
+    // 경고: 과세매출은 있는데 부가세가 0 (영세율 매출은 제외)
+    const warn = (salesTax>0 && salesVat===0)
+      ? `<div class="vat-warn">⚠ 이 기간 과세매출 ${won(salesTax)}원에 부가세가 입력되지 않았습니다. 국내 과세매출이면 ‘부가세 별도’ 체크를 확인하세요. (애드몹·애드센스 등 해외수익이면 ‘영세율’ 유형으로 입력)</div>` : '';
+    const zeroRow = salesZero>0
+      ? `<tr><td>영세율 매출 <span class="muted">(해외·수출 0%)</span></td><td class="num" style="color:var(--ok)">${won(salesZero)}</td></tr>` : '';
+
+    cards+=`<div class="vat-card ${hasTx?'':'vat-empty'}">
+      <div class="vat-card-head">
+        <div><span class="pill">${p.q}</span> <span class="muted">${p.months[0]}~${p.months[2]}월</span></div>
+        <div class="vat-due">신고기한 ${dueStr} · <b style="color:${ddayColor}">${ddayLabel}</b></div>
+      </div>
+      <table class="vat-table"><tbody>
+        <tr><td>과세 매출표준 <span class="muted">(10%)</span></td><td class="num">${won(salesTax)}</td></tr>
+        ${zeroRow}
+        <tr><td>매출세액 <span class="muted">(받은 부가세)</span></td><td class="num" style="color:var(--debit)">${won(salesVat)}</td></tr>
+        <tr><td>매입세액 <span class="muted">(낸 부가세)</span></td><td class="num" style="color:var(--credit)">− ${won(purVat)}</td></tr>
+        <tr class="vat-pay"><td><b>${payable>=0?'납부할 세액':'환급받을 세액'}</b></td><td class="num"><b style="color:${payable>=0?'var(--bad)':'var(--ok)'}">${won(Math.abs(payable))}</b></td></tr>
+      </tbody></table>
+      ${warn}
+    </div>`;
+  });
+
+  const h=`
+    <div class="vat-bar">
+      <div><b>부가가치세 신고 집계</b> <span class="muted">분기별 자동 계산</span></div>
+      <select id="vatYear" style="width:auto;min-width:110px">${opts}</select>
+    </div>
+    <div class="vat-grid">${cards}</div>
+    <div class="summary" style="margin-top:6px">
+      <div class="box"><div class="k">${vatYear}년 매출세액 합계</div><div class="v" style="color:var(--debit)">${won(yS)}</div></div>
+      <div class="box"><div class="k">${vatYear}년 매입세액 합계</div><div class="v" style="color:var(--credit)">${won(yP)}</div></div>
+      <div class="box"><div class="k">${vatYear}년 연간 납부 합계</div><div class="v" style="color:${yPay>=0?'var(--bad)':'var(--ok)'}">${won(Math.abs(yPay))}${yPay<0?' (환급)':''}</div></div>
+      ${yZero>0?`<div class="box"><div class="k">${vatYear}년 영세율 매출</div><div class="v" style="color:var(--ok)">${won(yZero)}</div></div>`:''}
+    </div>
+    <p class="cal-note">
+      ※ <b>납부할 세액 = 매출세액 − 매입세액</b>. 매출세액이 더 크면 납부, 매입세액이 더 크면 환급입니다.<br>
+      ※ 거래 입력 시 <b>‘부가세 별도’를 체크</b>해야 부가세예수금/대급금이 잡혀 여기에 집계됩니다.<br>
+      ${yZero>0?'※ <b>영세율 매출(애드몹·애드센스 등)</b>은 매출세액 0원이지만 <b>과세표준은 신고서에 반드시 기재</b>해야 합니다(미기재 시 가산세). 증빙으로 <b>외화입금증명서</b>를 보관하세요.<br>':''}
+      ※ 간이 집계용 참고치입니다. 실제 신고는 세금계산서·신용카드매출 등 증빙 기준으로 홈택스에서 확정하세요.
+    </p>`;
+  $('view').innerHTML=h;
+  const sel=$('vatYear');
+  sel&&sel.addEventListener('change',()=>{ vatYear=sel.value; renderVat(); });
+}
+
+/* ---------- CSV 내보내기 ---------- */
+$('exportBtn').addEventListener('click',()=>{
+  if(!entries.length){ flash('내보낼 데이터가 없습니다.'); return; }
+  let rows=[['날짜','유형','구분','계정과목','차변','대변','적요']];
+  entries.forEach(e=>e.lines.forEach(l=>{
+    rows.push([e.date,e.type,l.debit?'차변':'대변',l.acct,l.debit||'',l.credit||'',e.memo||'']);
+  }));
+  const csv='﻿'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='장부_'+todayStr()+'.csv';a.click();URL.revokeObjectURL(url);
+});
+
+$('clearBtn').addEventListener('click',()=>{
+  if(confirm('모든 거래 기록을 삭제할까요? 되돌릴 수 없습니다.')){ entries.forEach(e=>deleted.push(e.id)); entries=[];save();render(); }
+});
+
+/* ================= 공유 파일 동기화 + 암호화 ================= */
+const _enc=new TextEncoder(), _dec=new TextDecoder();
+const B64={
+  to:buf=>btoa(String.fromCharCode(...new Uint8Array(buf))),
+  from:s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0))
+};
+const FS_OK = !!(window.showOpenFilePicker && window.showSaveFilePicker);
+const PICKER={ types:[{description:'장부 데이터 파일', accept:{'application/octet-stream':['.jangbu']}}] };
+
+/* ---- 암호화 (PBKDF2 → AES-GCM 256) ---- */
+async function deriveKey(pass, salt){
+  const base=await crypto.subtle.importKey('raw', _enc.encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt, iterations:150000, hash:'SHA-256'},
+    base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+async function encryptPayload(obj){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM', iv}, cryptoKey, _enc.encode(JSON.stringify(obj)));
+  return JSON.stringify({app:'jangbu', v:1, salt:B64.to(fileSalt), iv:B64.to(iv), data:B64.to(ct)});
+}
+async function decryptText(text){
+  const o=JSON.parse(text);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM', iv:B64.from(o.iv)}, cryptoKey, B64.from(o.data));
+  return JSON.parse(_dec.decode(pt));
+}
+
+/* ---- IndexedDB: 파일 핸들 저장(재접속용) ---- */
+function idb(mode,fn){return new Promise((res,rej)=>{const r=indexedDB.open('jangbu_sync',1);
+  r.onupgradeneeded=()=>r.result.createObjectStore('kv');
+  r.onsuccess=()=>{const t=r.result.transaction('kv',mode);const s=t.objectStore('kv');const out=fn(s);
+    t.oncomplete=()=>res(out&&out.result!==undefined?out.result:undefined);t.onerror=()=>rej(t.error);};
+  r.onerror=()=>rej(r.error);});}
+const idbSet=(k,v)=>idb('readwrite',s=>s.put(v,k));
+const idbGet=k=>idb('readonly',s=>s.get(k));
+
+/* ---- 병합: 두 기기의 entries/deleted를 합침(id 기준) ---- */
+function mergeRemote(remote){
+  if(!remote) return;
+  const remEntries=remote.entries||[], remDel=remote.deleted||[];
+  const delSet=new Set([...deleted, ...remDel]);
+  const map=new Map();
+  [...remEntries, ...entries].forEach(e=>{ if(e&&e.id&&!map.has(e.id)) map.set(e.id,e); });
+  entries=[...map.values()].filter(e=>!delSet.has(e.id)).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  deleted=[...delSet];
+}
+
+/* ---- 파일 쓰기/읽기 ---- */
+async function writeFile(){
+  if(!fileHandle||!cryptoKey) return;
+  const text=await encryptPayload({version:1, entries, deleted, savedAt:Date.now()});
+  const w=await fileHandle.createWritable(); await w.write(text); await w.close();
+  try{ _lastMod=(await fileHandle.getFile()).lastModified; }catch(e){}  // 내 저장은 폴러가 무시하도록
+}
+let _saving=false, _pending=false;
+async function pushToFile(){
+  if(!fileHandle||!cryptoKey) return;
+  if(_saving){ _pending=true; return; }
+  _saving=true;
+  try{
+    try{ const f=await fileHandle.getFile(); if(f.size) mergeRemote(await decryptText(await f.text())); }catch(e){}
+    await writeFile(); saveLocal();
+  }catch(e){ syncMsg('저장 실패: '+e.message,true); }
+  finally{ _saving=false; if(_pending){ _pending=false; pushToFile(); } }
+}
+async function pullFromFile(silent){
+  if(!fileHandle||!cryptoKey){ if(!silent) syncMsg('먼저 공유 파일을 여세요.',true); return; }
+  try{
+    const f=await fileHandle.getFile();
+    _lastMod=f.lastModified;
+    if(f.size) mergeRemote(await decryptText(await f.text()));
+    saveLocal(); render();
+    if(!silent) syncMsg('동기화 완료 ✓');
+  }catch(e){ if(!silent) syncMsg('동기화 실패: '+e.message,true); }
+}
+
+/* ---- 권한 / UI ---- */
+async function ensurePerm(h){
+  const opt={mode:'readwrite'};
+  if((await h.queryPermission(opt))==='granted') return true;
+  return (await h.requestPermission(opt))==='granted';
+}
+function syncMsg(m,bad){ const e=$('syncMsg'); e.textContent=m; e.style.color=bad?'var(--bad)':'var(--ok)'; if(!bad) setTimeout(()=>{if(e.textContent===m)e.textContent='';},3500); }
+function updateSyncStatus(){
+  const s=$('syncStatus');
+  if(fileHandle&&cryptoKey){ s.className='sync-status on'; s.textContent='연결됨: '+fileHandle.name+' (암호화·자동 저장)'; $('syncBtn').disabled=false; }
+  else if(fileHandle){ s.className='sync-status off'; s.textContent='이전 파일 있음: '+fileHandle.name+' — 암호 입력 후 [공유 파일 열기]'; }
+  else { s.className='sync-status off'; s.textContent='미연결 — 이 컴퓨터에만 저장 중'; }
+  refreshDiscWarn();
+}
+
+/* ---- 버튼 동작 ---- */
+async function doOpen(){
+  const pass=$('passInput').value;
+  if(!pass){ syncMsg('공유 암호를 입력하세요.',true); return; }
+  try{
+    if(!fileHandle){ const arr=await window.showOpenFilePicker(PICKER); fileHandle=arr[0]; }
+    if(!await ensurePerm(fileHandle)){ syncMsg('파일 접근 권한이 거부되었습니다.',true); return; }
+    const f=await fileHandle.getFile(); const text=await f.text();
+    if(!f.size){ syncMsg('빈 파일입니다. 올바른 공유 파일을 선택하세요.',true); return; }
+    const meta=JSON.parse(text); fileSalt=B64.from(meta.salt);
+    cryptoKey=await deriveKey(pass, fileSalt);
+    let remote; try{ remote=await decryptText(text); } catch(e){ cryptoKey=null; syncMsg('암호가 틀렸거나 파일이 손상되었습니다.',true); updateSyncStatus(); return; }
+    await idbSet('handle', fileHandle);
+    mergeRemote(remote); await writeFile(); saveLocal(); render(); updateSyncStatus();
+    syncMsg('공유 파일에 연결되었습니다 ✓');
+  }catch(e){ if(e.name!=='AbortError') syncMsg('열기 실패: '+e.message,true); }
+}
+async function initSync(){
+  if(!FS_OK){
+    $('syncStatus').className='sync-status off';
+    $('syncStatus').textContent='이 브라우저는 자동 동기화 미지원 — 크롬/엣지로 여세요';
+    $('connectBtn').disabled=true;
+    return;
+  }
+  $('connectBtn').addEventListener('click', doOpen);
+  $('syncBtn').addEventListener('click', ()=>pullFromFile(false));
+  $('passInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doOpen(); });
+  try{ const h=await idbGet('handle'); if(h){ fileHandle=h; } }catch(e){}
+  updateSyncStatus();
+  // 창으로 돌아올 때 즉시 동기화
+  window.addEventListener('focus', ()=>{ if(fileHandle&&cryptoKey) pullFromFile(true); });
+  // 실시간 자동 갱신: 파일이 바뀌었을 때만 반영
+  startPolling();
+}
+
+/* ---- 실시간 자동 갱신 (파일 변경 감지 폴링) ---- */
+let _lastMod=-1, _pollBusy=false;
+function startPolling(){
+  setInterval(async ()=>{
+    if(!fileHandle||!cryptoKey||_pollBusy||_saving) return;
+    _pollBusy=true;
+    try{
+      const f=await fileHandle.getFile();
+      if(f.lastModified!==_lastMod){
+        const firstSeen=_lastMod===-1;
+        _lastMod=f.lastModified;
+        if(!firstSeen && f.size){      // 첫 확인은 건너뛰고, 이후 변경분만 반영
+          mergeRemote(await decryptText(await f.text()));
+          saveLocal(); render();
+          syncMsg('상대 입력 반영됨 ✓');
+        }
+      }
+    }catch(e){}
+    finally{ _pollBusy=false; }
+  }, 3000);
+}
+
+/* ---------- 시작 ---------- */
+syncForm(); render(); refreshDiscWarn(); initSync();
+</script>
+</body>
+</html>
